@@ -27,8 +27,8 @@ targets:
       path: Murmur/Info.plist
       properties:
         CFBundleDisplayName: Murmur
-        CFBundleShortVersionString: "0.1.1"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "0.1.2"
+        CFBundleVersion: "3"
         LSUIElement: true
         LSApplicationCategoryType: public.app-category.productivity
         NSMicrophoneUsageDescription: Murmur records your voice notes so it can transcribe them on this Mac.
