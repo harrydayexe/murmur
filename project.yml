@@ -49,6 +49,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: true
         GENERATE_INFOPLIST_FILE: false
         COMBINE_HIDPI_IMAGES: true
+        ASSETCATALOG_COMPILER_APPICON_NAME: Murmur
   MurmurTests:
     type: bundle.unit-test
     platform: macOS

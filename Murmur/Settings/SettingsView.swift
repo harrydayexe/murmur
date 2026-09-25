@@ -7,8 +7,11 @@ struct SettingsView: View {
             Tab("Projects", systemImage: "folder") {
                 ProjectsSettingsView()
             }
+            Tab("Front Matter", systemImage: "text.badge.checkmark") {
+                FrontMatterSettingsView()
+            }
         }
-        .frame(width: 640, height: 400)
+        .frame(width: 760, height: 560)
     }
 }
 
@@ -124,11 +127,56 @@ private struct ProjectDetailView: View {
             }
 
             Section {
+                Picker("Template", selection: binding(\.frontMatter.mode)) {
+                    Text("Use the global template").tag(FrontMatterMode.inherit)
+                    Text("Replace the global template").tag(FrontMatterMode.override)
+                    Text("Add to the global template").tag(FrontMatterMode.append)
+                }
+                if project.frontMatter.mode != .inherit {
+                    FrontMatterEditor(
+                        template: binding(\.frontMatter.template),
+                        render: { builder.build(context: $0) },
+                        defaultStyle: project.style
+                    )
+                    .id(project.id)
+                }
+            } header: {
+                Text("Front matter")
+            } footer: {
+                if project.frontMatter.mode == .append {
+                    Text("For keys in both templates, this project's value wins. Keys set to merge as lists are combined.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
+                FrontMatterEditor(
+                    template: binding(\.frontMatter.timelineTemplate),
+                    render: { context in
+                        FrontMatterBuilder.validate(
+                            TemplateRenderer(context: context)
+                                .renderFrontMatter(project.frontMatter.timelineTemplate, omitEmpty: app.settings.frontMatter.omitEmpty)
+                        )
+                    },
+                    defaultStyle: project.style,
+                    showsPresets: false
+                )
+                .id(project.id)
+            } header: {
+                Text("Timeline front matter")
+            } footer: {
+                Text("Used once, when Murmur creates this project's timeline.md.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Button("Reveal Settings File") {
                     NSWorkspace.shared.activateFileViewerSelecting([app.settingsStore.fileURL])
                 }
             } footer: {
-                Text("Templates, AI and recording options can be edited in the settings file for now. Restart Murmur after editing it.")
+                Text("AI and recording options can be edited in the settings file for now. Restart Murmur after editing it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -147,6 +195,17 @@ private struct ProjectDetailView: View {
         case .unavailable(let reason):
             Label(reason, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.caption)
         }
+    }
+
+    private var builder: FrontMatterBuilder {
+        let settings = app.settings.frontMatter
+        return FrontMatterBuilder(
+            globalTemplate: settings.template,
+            projectTemplate: project.frontMatter.template,
+            mode: project.frontMatter.mode,
+            omitEmpty: settings.omitEmpty,
+            mergeLists: settings.mergeLists
+        )
     }
 
     private func binding<Value>(_ keyPath: WritableKeyPath<Project, Value>) -> Binding<Value> {

@@ -23,8 +23,21 @@ enum TemplateToken: Equatable, Sendable {
 /// Splits template text into literals and placeholders. Pure.
 enum TemplateParser {
     static func parse(_ text: String) -> [TemplateToken] {
-        var tokens: [TemplateToken] = []
+        scan(text).map(\.token)
+    }
+
+    /// Every placeholder in `text` with where it sits, for highlighting in the editor.
+    static func placeholderRanges(in text: String) -> [(range: Range<String.Index>, placeholder: Placeholder)] {
+        scan(text).compactMap { item in
+            guard case .placeholder(let placeholder) = item.token else { return nil }
+            return (item.range, placeholder)
+        }
+    }
+
+    private static func scan(_ text: String) -> [(token: TemplateToken, range: Range<String.Index>)] {
+        var tokens: [(token: TemplateToken, range: Range<String.Index>)] = []
         var literal = ""
+        var literalStart = text.startIndex
         var index = text.startIndex
 
         while index < text.endIndex {
@@ -34,10 +47,11 @@ enum TemplateParser {
                 let raw = String(text[index..<close.upperBound])
                 if let placeholder = parsePlaceholder(inner, raw: raw) {
                     if !literal.isEmpty {
-                        tokens.append(.literal(literal))
+                        tokens.append((.literal(literal), literalStart..<index))
                         literal = ""
                     }
-                    tokens.append(.placeholder(placeholder))
+                    tokens.append((.placeholder(placeholder), index..<close.upperBound))
+                    literalStart = close.upperBound
                 } else {
                     literal += raw
                 }
@@ -47,7 +61,7 @@ enum TemplateParser {
                 index = text.index(after: index)
             }
         }
-        if !literal.isEmpty { tokens.append(.literal(literal)) }
+        if !literal.isEmpty { tokens.append((.literal(literal), literalStart..<text.endIndex)) }
         return tokens
     }
 
