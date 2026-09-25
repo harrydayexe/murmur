@@ -40,7 +40,6 @@ struct NoteStyleTests {
         title: "Chose SQLite",
         summary: "Moved the cache.",
         keyPoints: ["Faster", "Simpler"],
-        audioFilename: "note one.m4a",
         transcript: "We chose SQLite.\n\nIt is faster.",
         rawTranscript: "we chose sqlite\n\nit is faster"
     )
@@ -59,8 +58,6 @@ struct NoteStyleTests {
 
             - Faster
             - Simpler
-
-            [Audio](audio/note%20one.m4a)
 
             ## Transcript
 
@@ -96,8 +93,6 @@ struct NoteStyleTests {
             > - Faster
             > - Simpler
 
-            ![[note one.m4a]]
-
             ## Transcript
 
             We chose SQLite.
@@ -118,7 +113,6 @@ struct NoteStyleTests {
         note.frontMatter = .none
         note.summary = ""
         note.keyPoints = []
-        note.audioFilename = ""
         let rendered = NoteStyle(kind: .obsidian).render(note)
         #expect(rendered.hasPrefix("# Chose SQLite\n\n## Transcript"))
         #expect(!rendered.contains("Summary"))

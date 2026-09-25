@@ -273,7 +273,6 @@ final class AppState {
                 recordingProjectID = project.id
                 try await transcriber.start(
                     locale: locale,
-                    keepAudio: settings.recording.keepAudio,
                     onUpdate: { self.live = $0 },
                     onLevel: { self.level = $0 }
                 )
@@ -311,6 +310,9 @@ final class AppState {
                     let result = try await pipeline.run(capture, snapshot: fallback)
                     finish(with: result)
                 } catch {
+                    if let audio = capture.audioFile {
+                        Log.output.error("Recording left at \(audio.path(percentEncoded: false), privacy: .public)")
+                    }
                     phase = .error("Couldn't save the note: \(error.localizedDescription)")
                 }
             }

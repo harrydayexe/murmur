@@ -29,17 +29,7 @@ final class AudioRecorder: @unchecked Sendable {
     private var continuation: AsyncStream<AnalyzerInput>.Continuation?
     private var levelHandler: (@Sendable (Float) -> Void)?
 
-    /// AAC, mono, 48 kbps.
-    static func aacSettings(sampleRate: Double) -> [String: Any] {
-        [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: min(sampleRate, 48_000),
-            AVNumberOfChannelsKey: 1,
-            AVEncoderBitRateKey: 48_000,
-        ]
-    }
-
-    /// 16-bit PCM, mono, for the temporary file when audio isn't kept.
+    /// 16-bit PCM, mono, for the temporary capture file.
     static func pcmSettings(sampleRate: Double) -> [String: Any] {
         [
             AVFormatIDKey: kAudioFormatLinearPCM,

@@ -74,8 +74,6 @@ struct TemplateRendererTests {
         ("{{duration_seconds}}", "192"),
         ("{{locale}}", "en-GB"),
         ("{{filename}}", "2026-09-25-1432-chose-sqlite-over-json"),
-        ("{{audio}}", "x.m4a"),
-        ("{{audio_link}}", "[[x.m4a]]"),
         ("{{processing}}", "tidied"),
         ("{{app_version}}", "0.1.0"),
         ("{{ai_summary}}", "Decided to move the cache."),
@@ -91,11 +89,6 @@ struct TemplateRendererTests {
 
     @Test func standardStyleDefaults() {
         #expect(inline("{{datetime}}", style: .standard) == "2026-09-25T14:32:05+01:00")
-        #expect(inline("{{audio_link}}", style: .standard) == "audio/x.m4a")
-    }
-
-    @Test func audioLinkIsEmptyWithoutAudio() {
-        #expect(inline("{{audio_link}}") { $0.audioFilename = "" } == "")
     }
 
     @Test func shortDurationHasNoMinutes() {
@@ -141,7 +134,6 @@ struct TemplateRendererTests {
         #expect(frontMatter("title: {{title}}") { $0.title = "yes" } == #"title: "yes""#)
         #expect(frontMatter("title: {{title}}") { $0.title = "#hash" } == ##"title: "#hash""##)
         #expect(frontMatter("created: {{datetime}}") == "created: 2026-09-25T14:32:05")
-        #expect(frontMatter("audio: {{audio_link}}") == #"audio: "[[x.m4a]]""#)
     }
 
     @Test func insideQuotesEscapes() {

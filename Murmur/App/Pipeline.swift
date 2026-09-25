@@ -16,7 +16,7 @@ struct RecordingSnapshot: Sendable {
 struct CapturedRecording: Sendable {
     var segments: [TranscriptSegment]
     var duration: TimeInterval
-    /// Audio to keep, in a temporary location. Nil if audio isn't kept.
+    /// The temporary capture. Deleted once the raw note is written; never kept.
     var audioFile: URL?
 }
 
@@ -70,7 +70,6 @@ struct NotePipeline: Sendable {
             Log.output.error("Project folder unavailable; saving to \(folder.path(percentEncoded: false), privacy: .public)")
             warnings.append("The folder for \(project.name) wasn't reachable, so the note was saved in Murmur's Unsaved folder.")
         }
-        let audioFolder = folder.appending(path: NoteStyle.audioFolder, directoryHint: .isDirectory)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
 
         let requirements = MetadataRequirements(
@@ -99,20 +98,15 @@ struct NotePipeline: Sendable {
         )
 
         let draftName = Filename.unique(Filename.render(pattern: settings.output.filenamePattern, context: context)) {
-            Self.isTaken($0, in: folder, audioFolder: audioFolder)
+            Self.isTaken($0, in: folder)
         }
         context.filename = draftName
-        if let audio = capture.audioFile {
-            try fileManager.createDirectory(at: audioFolder, withIntermediateDirectories: true)
-            let audioName = "\(draftName).\(audio.pathExtension)"
-            try fileManager.moveItem(at: audio, to: audioFolder.appending(path: audioName))
-            context.audioFilename = audioName
-        }
 
         var noteURL = folder.appending(path: "\(draftName).md")
         try write(context: context, snapshot: snapshot, transcript: draftTranscript, raw: rawTranscript, metadata: nil, to: noteURL, warnings: &warnings)
         Log.output.info("Raw note written: \(noteURL.lastPathComponent, privacy: .public)")
-        // From here on the note exists on disk.
+        // From here on the note exists on disk, so the audio is no longer needed.
+        if let audio = capture.audioFile { try? fileManager.removeItem(at: audio) }
 
         // MARK: Tidy
         var transcript = draftTranscript
@@ -155,18 +149,7 @@ struct NotePipeline: Sendable {
 
         var finalName = Filename.render(pattern: settings.output.filenamePattern, context: context)
         if finalName != draftName {
-            finalName = Filename.unique(finalName) { Self.isTaken($0, in: folder, audioFolder: audioFolder) }
-            if !context.audioFilename.isEmpty {
-                let ext = (context.audioFilename as NSString).pathExtension
-                let newAudio = "\(finalName).\(ext)"
-                do {
-                    try fileManager.moveItem(at: audioFolder.appending(path: context.audioFilename), to: audioFolder.appending(path: newAudio))
-                    context.audioFilename = newAudio
-                } catch {
-                    Log.output.error("Couldn't rename audio: \(String(describing: error), privacy: .public)")
-                    finalName = draftName
-                }
-            }
+            finalName = Filename.unique(finalName) { Self.isTaken($0, in: folder) }
         }
         context.filename = finalName
 
@@ -218,17 +201,13 @@ struct NotePipeline: Sendable {
             title: context.title,
             summary: body.summary ? metadata?.summary ?? "" : "",
             keyPoints: body.keyPoints ? metadata?.keyPoints ?? [] : [],
-            audioFilename: context.audioFilename,
             transcript: transcript,
             rawTranscript: raw
         )
         try AtomicFile.write(NoteStyle(kind: snapshot.project.style).render(document), to: url)
     }
 
-    private static func isTaken(_ name: String, in folder: URL, audioFolder: URL) -> Bool {
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: folder.appending(path: "\(name).md").path(percentEncoded: false)) { return true }
-        let audioFiles = (try? fileManager.contentsOfDirectory(atPath: audioFolder.path(percentEncoded: false))) ?? []
-        return audioFiles.contains { ($0 as NSString).deletingPathExtension == name }
+    private static func isTaken(_ name: String, in folder: URL) -> Bool {
+        FileManager.default.fileExists(atPath: folder.appending(path: "\(name).md").path(percentEncoded: false))
     }
 }

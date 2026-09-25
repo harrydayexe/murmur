@@ -35,7 +35,6 @@ struct FrontMatterBuilderTests {
             title: Chose SQLite over JSON
             created: 2026-09-25T14:32:05
             project: "[[Murmur]]"
-            audio: "[[x.m4a]]"
             """))
     }
 
