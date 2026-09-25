@@ -34,6 +34,7 @@ The notes are raw material for blog posts about building projects. The owner wil
 | Frameworks | `Speech`, `AVFoundation`, `FoundationModels`, `SwiftUI`, `ServiceManagement`, `UserNotifications` |
 | Project | **XcodeGen** (`project.yml`), built with `xcodebuild`. The generated `.xcodeproj` is gitignored. |
 | App type | `LSUIElement = YES`, using `MenuBarExtra` with `.menuBarExtraStyle(.window)` |
+| App icon | Icon Composer file at `Murmur/Resources/Murmur.icon`, selected with `ASSETCATALOG_COMPILER_APPICON_NAME: Murmur`. It shows in Finder and in the Dock while the Settings window is open. |
 | Sandbox | **On**, with no `network.client` entitlement, so macOS itself blocks network access. Project folders are accessed through security-scoped bookmarks. |
 | Entitlements | `com.apple.security.app-sandbox`, `com.apple.security.device.audio-input`, `com.apple.security.files.user-selected.read-write`, `com.apple.security.files.bookmarks.app-scope` |
 | Info.plist | `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`, `LSUIElement` |
