@@ -44,7 +44,8 @@ struct NotePipeline: Sendable {
     var unsavedRoot: URL
     var isWritable: @Sendable (URL) -> Bool
     /// Timeline isn't written yet, so it doesn't count as a use of the summary or type.
-    var timelineEnabled = false
+    /// Static so the Used AI values panel sees the same value.
+    static let timelineEnabled = false
 
     func run(
         _ capture: CapturedRecording,
@@ -79,7 +80,7 @@ struct NotePipeline: Sendable {
             noteTypes: settings.noteTypes,
             effectiveTemplate: frontMatterBuilder(snapshot).effectiveTemplate,
             filenamePattern: settings.output.filenamePattern,
-            timelineEnabled: timelineEnabled
+            timelineEnabled: Self.timelineEnabled
         )
 
         let fallbackTitle = "Voice note " + DateTokenFormatter(timeZone: snapshot.timeZone, locale: Locale(identifier: settings.recording.locale))

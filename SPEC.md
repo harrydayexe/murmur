@@ -264,10 +264,12 @@ These rules only matter if a template uses `{{ai_tags}}`:
 - Settings shows a sample output and warns: "AI tags are only added where `{{ai_tags}}` appears in a template."
 
 #### 5.3.6 Editor UX
-- A monospaced `TextEditor` with placeholder syntax highlighting and autocompletion after `{{`
-- An **Insert** menu listing every placeholder and filter, each with a description
-- A **live preview** that renders the template against a sample note, with a switch between "with AI values" and "AI unavailable" samples, plus the parse status from `Yams` (✅, or an error with its line number)
+- A monospaced `TextEditor` (bound to an `AttributedString`) with placeholder syntax highlighting: known placeholders in the accent colour, unknown ones in red and underlined. Pasted formatting is stripped.
+- Autocompletion after `{{` (placeholder names) and after `|` inside one (filters). SwiftUI's `TextEditor` has no completion API, so suggestions appear in a strip below the editor rather than a popup at the cursor. Picking one adds the closing `}}` if it's missing.
+- An **Insert** menu listing every placeholder and filter, each with a description. A filter is inserted inside the placeholder at the cursor.
+- A **live preview** that renders the template against a sample note, with a switch between "with AI values" and "AI unavailable" samples and a Standard/Obsidian style picker (default: the project's style), plus the parse status from `Yams` (✅, or an error with its line number in the rendered block)
 - Presets menu (applying one asks for confirmation before replacing text)
+- The same editor is used for the global template, a project's template (hidden when the mode is `inherit`; the preview shows the merged result in `append` mode) and a project's timeline template
 
 ### 5.4 Note style: `standard` vs `obsidian`
 **Auto-detection:** when a folder is chosen, walk up its parent folders looking for a `.obsidian/` directory. If one is found, set `style = obsidian` and store `vaultRootPathHint`. The user can change the style.
@@ -357,7 +359,7 @@ Join the segments, with a new paragraph wherever the gap is 2.0 s or more. Apply
 | type | the note type is `Auto` **and** `ai.classifyType` is on **and** the type list isn't empty **and** `{{type}}` is used somewhere (template or timeline) |
 | tags | `{{ai_tags}}` is used in the effective template and `maxCount > 0` |
 
-The Front matter tab's **"Used AI values"** panel shows this result live, for example: "AI will generate: title, summary. Not generated: tags, key points, type."
+The Front matter tab's **"Used AI values"** panel shows this result live, for example: "AI will generate: title, summary. Not generated: tags, key points, type." It's worked out for the active project's effective template, with the note type set to `Auto` and the same timeline setting the pipeline uses (`NotePipeline.timelineEnabled`, off until the timeline is written).
 
 **Step 2: generate with a dynamic schema.** Build a `DynamicGenerationSchema` containing only the needed fields:
 - `title`: string, with the guide "at most 8 words, reuse the speaker's phrasing"
@@ -389,7 +391,8 @@ Murmur/
   AI/             Polisher.swift, Chunker.swift, FidelityGuard.swift, MetadataRequirements.swift,
                   MetadataGenerator.swift (DynamicGenerationSchema), TagNormalizer.swift, ModelStatus.swift
   Templates/      TemplateParser.swift (placeholders + filters), TemplateRenderer.swift, DateTokenFormatter.swift
-                  (moment-style tokens → DateFormatter), FrontMatterBuilder.swift, YAMLEmitter.swift, Presets.swift
+                  (moment-style tokens → DateFormatter), FrontMatterBuilder.swift, YAMLEmitter.swift, Presets.swift,
+                  PlaceholderCatalog.swift (descriptions), TemplateEditing.swift (highlighting, autocomplete, preview samples)
   Output/         NoteWriter.swift, NoteStyle.swift (standard/obsidian), Filename.swift, Timeline.swift, UnsavedNotes.swift
   UI/             PopoverView, RecordingView, ProcessingView, RecentNotesView, NewProjectSheet,
                   FrontMatterEditor (highlighting, autocomplete, preview), Onboarding/

@@ -58,7 +58,7 @@ struct FrontMatterBuilder: Sendable {
             default: return .invalid(rendered: text, error: "front matter must be a set of `key: value` lines")
             }
         } catch {
-            return .invalid(rendered: text, error: Self.describe(error))
+            return .invalid(rendered: text, error: Self.describe(error, in: text))
         }
     }
 
@@ -137,10 +137,32 @@ struct FrontMatterBuilder: Sendable {
         }
     }
 
-    private static func describe(_ error: Error) -> String {
-        if let yamlError = error as? YamlError {
+    /// `line N: problem`, so the editor and the warning can point at the line.
+    private static func describe(_ error: Error, in text: String) -> String {
+        guard let yamlError = error as? YamlError else { return error.localizedDescription }
+        switch yamlError {
+        case .scanner(let context, let problem, let mark, _), .parser(let context, let problem, let mark, _),
+             .composer(let context, let problem, let mark, _):
+            // libyaml's problem mark is where it noticed the error. For something left unfinished
+            // (a key with no `:`, an unclosed quote, `[` or `{`) that's the next line, and the context
+            // mark is where the unfinished thing started. A block mapping context is just the
+            // start of the mapping, so the problem mark is right there.
+            var line = mark.line
+            if let context, context.text.hasPrefix("while scanning") || context.text.contains("flow") {
+                line = context.mark.line
+            }
+            return "line \(line): \(problem)"
+        case .duplicatedKeysInMapping(let duplicates, _):
+            // The context mark is the start of the mapping, so find the repeated key's line instead.
+            let lines = text.components(separatedBy: "\n")
+            let line = lines.indices.last { index in
+                guard let (_, key, _) = TemplateRenderer.splitKeyValue(lines[index]) else { return false }
+                return duplicates.contains(key.trimmingCharacters(in: CharacterSet(charactersIn: "\"'")))
+            }
+            let names = duplicates.joined(separator: ", ")
+            return line.map { "line \($0 + 1): duplicate key \(names)" } ?? "duplicate key \(names)"
+        default:
             return String(describing: yamlError).components(separatedBy: "\n").first ?? "invalid YAML"
         }
-        return error.localizedDescription
     }
 }

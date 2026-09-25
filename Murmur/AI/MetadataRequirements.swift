@@ -58,4 +58,26 @@ struct MetadataRequirements: Sendable {
         if let projectDefaultType, !projectDefaultType.isEmpty { return projectDefaultType }
         return nil
     }
+
+    /// For the Used AI values panel, e.g. "AI will generate: title, summary. Not generated: key points, type, tags."
+    var summaryText: String {
+        let fields = self.fields
+        let used = MetadataField.allCases.filter { fields.contains($0) }.map(\.displayName)
+        let unused = MetadataField.allCases.filter { !fields.contains($0) }.map(\.displayName)
+        var parts = [used.isEmpty ? "AI won't generate anything." : "AI will generate: \(used.joined(separator: ", "))."]
+        if !unused.isEmpty { parts.append("Not generated: \(unused.joined(separator: ", ")).") }
+        return parts.joined(separator: " ")
+    }
+}
+
+extension MetadataField {
+    var displayName: String {
+        switch self {
+        case .title: "title"
+        case .summary: "summary"
+        case .keyPoints: "key points"
+        case .type: "type"
+        case .tags: "tags"
+        }
+    }
 }
