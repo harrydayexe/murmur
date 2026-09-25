@@ -1,0 +1,35 @@
+# Runs the test suite on every pull request and every push to main.
+# Uses ad-hoc signing, so it needs no secrets and works on pull requests from forks.
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up tools
+        run: |
+          brew install xcodegen
+          xcodebuild -version
+          xcodegen generate
+
+      - name: Test
+        run: |
+          xcodebuild -scheme Murmur -destination 'platform=macOS' \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            test

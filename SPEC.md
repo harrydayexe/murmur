@@ -39,6 +39,7 @@ The notes are raw material for blog posts about building projects. The owner wil
 | Info.plist | `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`, `LSUIElement` |
 | Signing | Hardened Runtime on. Releases are signed with a Developer ID Application certificate, then notarised and stapled in CI. Cloud-managed Developer ID signing can't be used, because it doesn't work with App Store Connect API keys |
 | Distribution | Pushing a `vX.Y.Z` tag on `main` runs `.github/workflows/release.yml`. The tag must match `CFBundleShortVersionString` in `project.yml`. The workflow tests, signs and notarises the app, publishes the zip as a GitHub release and updates the cask in `harrydayexe/homebrew-tap`. There's no in-app updater, because it would need network access. Updates come through `brew upgrade` |
+| Continuous integration | `.github/workflows/test.yml` runs the test suite with ad-hoc signing on every pull request and every push to `main` |
 
 ## 3. User experience
 
@@ -456,4 +457,4 @@ Diarisation, editing notes inside the app, sync, iOS version, any non-on-device 
 **SDK differences found (macOS 27 SDK, Xcode 27):**
 - `GenerationOptions(sampling:…)` is deprecated. Use `GenerationOptions(samplingMode:temperature:maximumResponseTokens:)`.
 - On macOS 27, `LanguageModelError.contextSizeExceeded` (plus `.guardrailViolation`, `.unsupportedLanguageOrLocale`) replaces the `LanguageModelSession.GenerationError` cases, which are deprecated there. `ModelStatus.isContextExceeded` still checks both in case the deprecated error is thrown.
-- Release CI runs on GitHub's `xcode-27` runner image. The `macos-26` image only has Xcode 26.x, whose SDK lacks the APIs above.
+- Test and release CI run on GitHub's `xcode-27` runner image. The `macos-26` image only has Xcode 26.x, whose SDK lacks the APIs above.
