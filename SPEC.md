@@ -19,7 +19,7 @@ The notes are raw material for blog posts about building projects. The owner wil
 1. **Everything stays on the Mac.** Speech-to-text uses Apple's Speech framework and text processing uses `SystemLanguageModel` (the on-device model), and nothing else.
    - No cloud or third-party models of any kind: no Private Cloud Compute, Whisper, OpenAI, Anthropic, Google, and no third-party `LanguageModel` implementations. No analytics, crash reporters or update checkers.
    - The app has **no network entitlement** and doesn't import `URLSession`/`Network`; a test enforces this. The only network activity is macOS downloading Apple's speech model the first time (`AssetInventory`).
-2. **Never lose a recording.** Save the audio and the raw transcript to disk *before* any AI step.
+2. **Never lose a recording.** Save the raw transcript to disk *before* any AI step. Audio isn't kept: it goes to a temporary file that is deleted once the raw note has been written. (Changed from keeping `.m4a` files in `audio/` because the user doesn't want audio saved.)
 3. **Stay close to the speaker's words.** The model may fix punctuation, drop filler words and split paragraphs. It must not paraphrase, summarise the body, reorder, or add content. AI-generated parts are clearly labelled, and the raw transcript is always kept.
 4. **The user owns the front matter.** Every key in a note's front matter comes from a template the user controls. The app never adds, renames, reorders or fills in keys on its own. AI output reaches front matter **only** through a placeholder the user wrote into a template.
 5. **Dependencies:** Apple frameworks, plus `KeyboardShortcuts` (sindresorhus) and `Yams`, both via SPM. Nothing else.
@@ -111,7 +111,7 @@ All settings live in one human-readable JSON file:
       "archived": false
     }
   ],
-  "recording": { "locale": "en-GB", "keepAudio": true, "maxMinutes": 30, "inputDeviceUID": null },
+  "recording": { "locale": "en-GB", "maxMinutes": 30, "inputDeviceUID": null },
   "ai": {
     "tidyLevel": "light",
     "title": true,
@@ -149,7 +149,7 @@ Each project has its **own save folder**, front matter, note style and glossary.
 ### 4.3 Settings window tabs
 - **General**: launch at login, notifications, hotkeys
 - **Projects**: see §4.2
-- **Recording**: input device, locale, keep audio, max length
+- **Recording**: input device, locale, max length
 - **Front matter**: global template editor, presets, omit-empty toggle, list-merge keys, **placeholder reference** (§5.3), and a **"Used AI values"** summary (§6.5)
 - **Note types**: see §4.4
 - **AI**: tidy level (`Off` / `Light`); AI title on/off; body summary and key points on/off; type classification on/off; **AI tags** rules (§5.3.5); global glossary; model status with a **Test** button
@@ -173,8 +173,6 @@ Global and per-project glossaries are combined:
 <project folder>/
   2026-09-25-1432-chose-sqlite-over-json.md
   timeline.md
-  audio/
-    2026-09-25-1432-chose-sqlite-over-json.m4a
 ```
 - Filenames come from `output.filenamePattern`. After rendering, the name is cleaned: the characters `[ ] # ^ | \ / :` and control characters are removed, and it's capped at 100 characters. If the title is empty, `{{title|slug}}` falls back to `note`. Collisions get `-2`, `-3`, and so on.
 - All writes are atomic: write a temp file in the same directory, then rename.
@@ -185,9 +183,8 @@ Each section can be switched off in the AI or Recording settings. Disabled or fa
 2. `# {{title}}`
 3. Summary *(AI-generated)*, if `ai.body.summary` is on
 4. Key points *(AI-generated)*, if `ai.body.keyPoints` is on
-5. Audio embed/link, if audio is kept
-6. `## Transcript` (tidied). If nothing was transcribed, it says *No speech was transcribed.* rather than leaving the heading empty.
-7. Raw transcript (collapsed): the speech recogniser's output before glossary replacements and tidying. Left out if empty.
+5. `## Transcript` (tidied). If nothing was transcribed, it says *No speech was transcribed.* rather than leaving the heading empty.
+6. Raw transcript (collapsed): the speech recogniser's output before glossary replacements and tidying. Left out if empty.
 
 ### 5.3 Front matter (fully user-defined)
 
@@ -212,7 +209,7 @@ The front matter of a note is **exactly** the rendered template, and nothing els
 |---|---|
 | None | *(empty)* |
 | Minimal *(default)* | `created: {{datetime}}` |
-| Obsidian basic | `title: {{title}}`<br>`created: {{datetime}}`<br>`project: "[[{{project}}]]"`<br>`audio: {{audio_link}}` |
+| Obsidian basic | `title: {{title}}`<br>`created: {{datetime}}`<br>`project: "[[{{project}}]]"` |
 
 **No preset uses `{{ai_tags}}`.** AI tags only appear if the user types that placeholder themselves.
 
@@ -228,7 +225,6 @@ The front matter of a note is **exactly** the rendered template, and nothing els
 | `{{duration}}` | `3m12s`. `{{duration_seconds}}` gives an integer | app |
 | `{{locale}}` | `en-GB` | app |
 | `{{filename}}` | Note filename without `.md` | app |
-| `{{audio}}` / `{{audio_link}}` | Audio filename / style-appropriate link (`"[[x.m4a]]"` or `audio/x.m4a`). Empty if audio isn't kept. | app |
 | `{{processing}}` | `tidied` / `tidied-partial` / `raw` | app |
 | `{{app_version}}` | `0.4.0` | app |
 | `{{ai_summary}}` | One-to-two sentence summary | **AI** |
@@ -282,13 +278,11 @@ The style affects the **body** markup and the **default formats** of placeholder
 |---|---|---|
 | Summary | `> **Summary** *(AI-generated)*: …` | `> [!summary] Summary (AI-generated)` callout |
 | Key points | bold label + bullets | `> [!note]- Key points (AI-generated)` callout |
-| Audio in body | `[Audio](audio/<file>.m4a)` | `![[<file>.m4a]]` |
 | Raw transcript | `<details>` block | `> [!quote]- Raw transcript` collapsed callout, every line starting with `> ` |
 | Invalid front matter comment | `<!-- … -->` | `%% … %%` |
 | Timeline links | `[Title](file.md)` | `[[file\|Title]]` |
 | Default `{{datetime}}` | ISO 8601 with offset | `YYYY-MM-DDTHH:mm:ss` |
 | Default list layout | flow | block |
-| `{{audio_link}}` | `audio/<file>.m4a` | `"[[<file>.m4a]]"` |
 
 **Open in Obsidian:** `obsidian://open?path=<percent-encoded absolute path>` via `NSWorkspace` (a local URL scheme, not a network call).
 
@@ -311,7 +305,7 @@ Take a snapshot of the project, style, templates and AI settings **when recordin
 - `AVAudioEngine` tap on `inputNode`. Read the input format at runtime; don't hard-code it.
 - For each buffer:
   1. **Copy** it.
-  2. Write it to `.m4a` (AAC, mono, 48 kbps) if Keep audio is on. Otherwise write to a temp CAF file.
+  2. Write it to a temp CAF file (16-bit PCM, mono). The pipeline deletes it right after the raw note is written. If saving fails even in `Unsaved/`, the file is left in the temp directory and its path is logged.
   3. Convert (`AVAudioConverter`, `primeMethod = .none`) and yield `AnalyzerInput(buffer:)` into an `AsyncStream`.
   4. Publish the RMS level at about 20 Hz.
 - Handle `AVAudioEngineConfigurationChange` by restarting the tap.
@@ -379,7 +373,7 @@ Convert it with `GenerationSchema(root:dependencies:)` and call `session.respond
 - Prewarm the session when recording starts (only if at least one field is needed).
 
 ### 6.6 Final write
-Re-render the templates with all values, and rewrite the note atomically. Rename the note and audio file per the filename pattern, append to the timeline, and show Done plus the notification.
+Re-render the templates with all values, and rewrite the note atomically. Rename the note per the filename pattern, append to the timeline, and show Done plus the notification.
 
 ## 7. Architecture
 
@@ -423,7 +417,7 @@ project.yml
 
 **Manual acceptance**
 1. Fresh install with the *Minimal* preset: notes have only `created:` in the front matter. No tags appear anywhere in the vault.
-2. Switch the project to *Obsidian basic*: `title`, `created`, `project` (a working link) and `audio` (embed link) appear in Obsidian's properties panel.
+2. Switch the project to *Obsidian basic*: `title`, `created`, and `project` (a working link) appear in Obsidian's properties panel.
 3. Add `tags:\n  - voice-note\n  - {{ai_tags}}` with `allowedOnly` and the list `[swift, audio, ux]`: tags include `voice-note` and only values from that list.
 4. Remove `{{ai_tags}}` again: new notes have `tags: [voice-note]` only, and the "Used AI values" panel shows tags as not generated.
 5. Rename the note types to `insight, blocker, win` and record with Auto: the type is one of those three. Empty the list: the picker disappears and no type is written.
@@ -441,7 +435,7 @@ project.yml
 4. **On-device AI**: chunker, polisher, fidelity guard, `MetadataRequirements`, dynamic-schema generator, tag normaliser, final rewrite
 5. **Polish**: front matter editor (highlighting, autocomplete, preview, Used AI values), note types UI, hotkeys, timeline, recent notes, Open in Obsidian, Unsaved notes, notifications, launch at login
 
-*Later ideas:* "Transcribe audio file…" import, re-tidy an existing note, append-to-last-note mode, a configurable body template (the same engine used for the note body), a per-project audio folder matching the vault's attachment folder.
+*Later ideas:* "Transcribe audio file…" import, re-tidy an existing note, append-to-last-note mode, a configurable body template (the same engine used for the note body).
 
 ## 10. Non-goals (v1)
 Diarisation, editing notes inside the app, sync, iOS version, any non-on-device model, search UI, Obsidian plugin.

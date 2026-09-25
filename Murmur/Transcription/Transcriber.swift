@@ -15,7 +15,6 @@ protocol Transcribing: AnyObject {
     func prepare(locale: Locale, assetProgress: @escaping @MainActor (Double) -> Void) async throws
     func start(
         locale: Locale,
-        keepAudio: Bool,
         onUpdate: @escaping @MainActor (LiveTranscript) -> Void,
         onLevel: @escaping @MainActor (Float) -> Void
     ) async throws
@@ -59,7 +58,6 @@ final class Transcriber: Transcribing {
     private var onUpdate: (@MainActor (LiveTranscript) -> Void)?
     private var startedAt: Date?
     private var audioURL: URL?
-    private var keepAudio = true
 
     func prepare(locale: Locale, assetProgress: @escaping @MainActor (Double) -> Void) async throws {
         if let prepared, prepared.locale == locale { return }
@@ -88,7 +86,6 @@ final class Transcriber: Transcribing {
 
     func start(
         locale: Locale,
-        keepAudio: Bool,
         onUpdate: @escaping @MainActor (LiveTranscript) -> Void,
         onLevel: @escaping @MainActor (Float) -> Void
     ) async throws {
@@ -100,14 +97,12 @@ final class Transcriber: Transcribing {
         segments = []
         volatile = ""
         self.onUpdate = onUpdate
-        self.keepAudio = keepAudio
         startedAt = Date()
 
-        let ext = keepAudio ? "m4a" : "caf"
-        let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).\(ext)")
+        // Temporary capture only; the pipeline deletes it once the raw note is written.
+        let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).caf")
         audioURL = url
-        let sampleRate = recorder.inputFormat.sampleRate
-        let settings = keepAudio ? AudioRecorder.aacSettings(sampleRate: sampleRate) : AudioRecorder.pcmSettings(sampleRate: sampleRate)
+        let settings = AudioRecorder.pcmSettings(sampleRate: recorder.inputFormat.sampleRate)
 
         let (stream, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
         inputContinuation = continuation
@@ -152,11 +147,7 @@ final class Transcriber: Transcribing {
         active = nil
 
         let duration = startedAt.map { Date().timeIntervalSince($0) } ?? 0
-        var audio = audioURL
-        if !keepAudio, let url = audioURL {
-            try? FileManager.default.removeItem(at: url)
-            audio = nil
-        }
+        let audio = audioURL
         audioURL = nil
         onUpdate = nil
         return CapturedRecording(segments: segments, duration: duration, audioFile: audio)

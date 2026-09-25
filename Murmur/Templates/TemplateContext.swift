@@ -45,8 +45,6 @@ struct TemplateContext: Sendable {
     var durationSeconds: Int = 0
     var locale: String = "en-GB"
     var filename: String = ""
-    /// Audio filename with extension. Empty if audio isn't kept.
-    var audioFilename: String = ""
     var processing: ProcessingStatus = .raw
     var appVersion: String = ""
     var aiSummary: String = ""
@@ -55,7 +53,7 @@ struct TemplateContext: Sendable {
 
     static let knownPlaceholders: [String] = [
         "title", "project", "type", "date", "time", "datetime", "weekday",
-        "duration", "duration_seconds", "locale", "filename", "audio", "audio_link",
+        "duration", "duration_seconds", "locale", "filename",
         "processing", "app_version", "ai_summary", "ai_key_points", "ai_tags",
     ]
 
@@ -81,10 +79,6 @@ struct TemplateContext: Sendable {
         case "duration_seconds": return .scalar(String(durationSeconds))
         case "locale": return .scalar(locale)
         case "filename": return .scalar(filename)
-        case "audio": return .scalar(audioFilename)
-        case "audio_link":
-            guard !audioFilename.isEmpty else { return .scalar("") }
-            return .scalar(style == .obsidian ? "[[\(audioFilename)]]" : "audio/\(audioFilename)")
         case "processing": return .scalar(processing.rawValue)
         case "app_version": return .scalar(appVersion)
         case "ai_summary": return .scalar(aiSummary)

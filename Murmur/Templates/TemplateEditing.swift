@@ -119,7 +119,6 @@ extension TemplateContext {
             style: style,
             durationSeconds: 192,
             filename: filename,
-            audioFilename: "\(filename).m4a",
             processing: withAI ? .tidied : .raw,
             appVersion: appVersion
         )

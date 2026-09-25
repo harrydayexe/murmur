@@ -170,9 +170,9 @@ struct PipelineTests {
         #expect(try String(contentsOf: result.noteURL, encoding: .utf8).hasPrefix("---\np: tidied-partial\n---"))
     }
 
-    @Test func audioIsMovedAndRenamedWithTheNote() async throws {
+    @Test func audioIsDeletedOnceTheNoteIsWritten() async throws {
         let folder = Fixtures.temporaryDirectory()
-        let audio = Fixtures.temporaryDirectory().appending(path: "capture.m4a")
+        let audio = Fixtures.temporaryDirectory().appending(path: "capture.caf")
         try Data([1, 2, 3]).write(to: audio)
         var capture = capture
         capture.audioFile = audio
@@ -181,13 +181,11 @@ struct PipelineTests {
             polisher: FakePolisher(result: .success(PolishResult(text: "x", fellBack: false))),
             generator: FakeGenerator(result: .success(GeneratedMetadata(title: "Chose SQLite"))),
             unsaved: Fixtures.temporaryDirectory()
-        ).run(capture, snapshot: snapshot(folder: folder, template: "audio: {{audio_link}}"))
+        ).run(capture, snapshot: snapshot(folder: folder, template: ""))
 
-        let audioFiles = try FileManager.default.contentsOfDirectory(atPath: folder.appending(path: "audio").path(percentEncoded: false))
-        #expect(audioFiles == ["2026-09-25-1432-chose-sqlite.m4a"])
-        let note = try String(contentsOf: result.noteURL, encoding: .utf8)
-        #expect(note.contains("audio: \"[[2026-09-25-1432-chose-sqlite.m4a]]\""))
-        #expect(note.contains("![[2026-09-25-1432-chose-sqlite.m4a]]"))
+        #expect(!FileManager.default.fileExists(atPath: audio.path(percentEncoded: false)))
+        let contents = try FileManager.default.contentsOfDirectory(atPath: folder.path(percentEncoded: false))
+        #expect(contents == [result.noteURL.lastPathComponent])
     }
 
     @Test func unreachableFolderFallsBackToUnsaved() async throws {

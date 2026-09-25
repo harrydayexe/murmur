@@ -6,7 +6,7 @@ Murmur is a macOS menu bar app. It records voice notes, transcribes them on-devi
 
 ## Non-negotiables
 - **On-device only.** Use Apple `Speech` (SpeechAnalyzer) for transcription and `SystemLanguageModel` for text. No cloud or third-party models, no `URLSession`/`Network`, no network entitlement, no analytics.
-- **Never lose a recording.** Write the audio and the raw transcript to disk before any AI step.
+- **Never lose a recording.** Write the raw transcript to disk before any AI step. Audio is only a temporary capture, deleted once the raw note is written. Never keep it.
 - **The user owns the front matter.** Never add a key the user's template didn't ask for. Only generate AI values that a template or setting actually uses.
 - **Stay faithful to what was said.** Tidying may fix punctuation and remove fillers, and nothing more. Keep the fidelity guard.
 - **Dependencies:** Apple frameworks, `KeyboardShortcuts` and `Yams` only. Ask before adding anything else.

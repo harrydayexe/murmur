@@ -25,7 +25,6 @@ enum FrontMatterPreset: String, CaseIterable, Sendable {
             title: {{title}}
             created: {{datetime}}
             project: "[[{{project}}]]"
-            audio: {{audio_link}}
             """
         }
     }

@@ -37,7 +37,6 @@ struct FrontMatterSettings: Codable, Equatable, Sendable {
 
 struct RecordingSettings: Codable, Equatable, Sendable {
     var locale = Locale.current.identifier(.bcp47)
-    var keepAudio = true
     var maxMinutes = 30
     var inputDeviceUID: String?
 }

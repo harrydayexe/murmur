@@ -12,9 +12,9 @@ Murmur lives in your Mac's menu bar. Click it and speak, and Murmur saves what y
 - **Transcription on your Mac**, using Apple's built-in speech recognition.
 - **Light tidying that keeps your words.** Murmur fixes punctuation, removes filler words like "um" and "you know", and splits the text into paragraphs. It doesn't paraphrase, summarise or reword. If a tidied section strays too far from what you said, Murmur keeps your original words instead.
 - **A title, summary and key points** for every note, clearly labelled as AI-generated.
-- **Your recordings are never lost.** The audio and the raw transcript are saved before any tidying happens, and the raw transcript is always kept in the note.
+- **Your recordings are never lost.** The raw transcript is saved before any tidying happens and is always kept in the note. Audio is only used for transcription and is deleted once the note is saved.
 - **Projects.** Give each project its own folder, so notes land where the work is.
-- **Made for Obsidian.** When a project's folder is inside a vault, notes use callouts, embedded audio and Obsidian properties.
+- **Made for Obsidian.** When a project's folder is inside a vault, notes use callouts and Obsidian properties.
 - **Front matter you control.** Murmur only adds the properties you ask for in your own template, nothing more.
 
 ## What a note looks like

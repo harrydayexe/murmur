@@ -22,7 +22,6 @@ enum Fixtures {
             durationSeconds: 192,
             locale: "en-GB",
             filename: "2026-09-25-1432-chose-sqlite-over-json",
-            audioFilename: "x.m4a",
             processing: .tidied,
             appVersion: "0.1.0",
             aiSummary: "Decided to move the cache.",
