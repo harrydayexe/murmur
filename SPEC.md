@@ -37,7 +37,8 @@ The notes are raw material for blog posts about building projects. The owner wil
 | Sandbox | **On**, with no `network.client` entitlement, so macOS itself blocks network access. Project folders are accessed through security-scoped bookmarks. |
 | Entitlements | `com.apple.security.app-sandbox`, `com.apple.security.device.audio-input`, `com.apple.security.files.user-selected.read-write`, `com.apple.security.files.bookmarks.app-scope` |
 | Info.plist | `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`, `LSUIElement` |
-| Signing | Personal use: sign locally or with Developer ID, with Hardened Runtime on |
+| Signing | Hardened Runtime on. Releases are signed with a Developer ID Application certificate, then notarised and stapled in CI. Cloud-managed Developer ID signing can't be used, because it doesn't work with App Store Connect API keys |
+| Distribution | Pushing a `vX.Y.Z` tag on `main` runs `.github/workflows/release.yml`. The tag must match `CFBundleShortVersionString` in `project.yml`. The workflow tests, signs and notarises the app, publishes the zip as a GitHub release and updates the cask in `harrydayexe/homebrew-tap`. There's no in-app updater, because it would need network access. Updates come through `brew upgrade` |
 
 ## 3. User experience
 

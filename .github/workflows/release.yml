@@ -1,0 +1,202 @@
+# Builds a Developer ID signed, notarised Murmur.app when a vX.Y.Z tag is pushed,
+# publishes it as a GitHub release and updates the cask in harrydayexe/homebrew-tap.
+#
+# Secrets (in the "release" environment):
+#   DEVELOPER_ID_P12_BASE64    Developer ID Application certificate and key, exported as .p12, base64 encoded
+#   DEVELOPER_ID_P12_PASSWORD  password for that .p12
+#   NOTARY_KEY_P8              contents of the App Store Connect API key file (AuthKey_XXXXXXXXXX.p8)
+#   NOTARY_KEY_ID              that key's ID
+#   NOTARY_ISSUER_ID           the App Store Connect issuer ID
+#   HOMEBREW_TAP_TOKEN         fine-grained token with Contents read/write on harrydayexe/homebrew-tap
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    environment: release
+    env:
+      TEAM_ID: WQ55A92845
+      BUNDLE_ID: dev.harryday.murmur
+      TAP_REPO: harrydayexe/homebrew-tap
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check tag
+        run: |
+          version="$(grep -E '^[[:space:]]*CFBundleShortVersionString:' project.yml | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::CFBundleShortVersionString '$version' in project.yml is not X.Y.Z"
+            exit 1
+          fi
+          if [[ "$TAG" != "v$version" ]]; then
+            echo "::error::Tag $TAG does not match CFBundleShortVersionString $version in project.yml"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $TAG is not on main"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Set up tools
+        run: |
+          brew install xcodegen
+          xcodebuild -version
+          xcodegen generate
+
+      - name: Test
+        run: |
+          xcodebuild -scheme Murmur -destination 'platform=macOS' \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            test
+
+      - name: Import signing certificate
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+
+          p12="$RUNNER_TEMP/developer-id.p12"
+          trap 'rm -f "$p12"' EXIT
+          base64 --decode <<<"$DEVELOPER_ID_P12_BASE64" > "$p12"
+          security import "$p12" -k "$keychain" -P "$DEVELOPER_ID_P12_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          curl -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain"
+
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | xargs)
+          security find-identity -v -p codesigning "$keychain" | grep -q "Developer ID Application: .*($TEAM_ID)" \
+            || { echo "::error::No Developer ID Application identity for team $TEAM_ID in the certificate"; exit 1; }
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Archive and export
+        run: |
+          xcodebuild -scheme Murmur -configuration Release -destination 'generic/platform=macOS' \
+            -archivePath "$RUNNER_TEMP/Murmur.xcarchive" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM_ID" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN" \
+            archive
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>developer-id</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Developer ID Application</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Murmur.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+          app="$RUNNER_TEMP/export/Murmur.app"
+          codesign --verify --strict --deep "$app"
+          codesign -dvv "$app" 2>&1 | grep -q '^Authority=Developer ID Application' \
+            || { echo "::error::Murmur.app is not signed with Developer ID"; exit 1; }
+          echo "APP=$app" >> "$GITHUB_ENV"
+
+      - name: Notarise and staple
+        env:
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          key="$RUNNER_TEMP/notary.p8"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$NOTARY_KEY_P8" > "$key"
+          notary=(--key "$key" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
+
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/Murmur-notarise.zip"
+          result="$(xcrun notarytool submit "$RUNNER_TEMP/Murmur-notarise.zip" "${notary[@]}" --wait --output-format json)"
+          status="$(plutil -extract status raw -o - - <<<"$result")"
+          if [[ "$status" != "Accepted" ]]; then
+            xcrun notarytool log "$(plutil -extract id raw -o - - <<<"$result")" "${notary[@]}" || true
+            echo "::error::Notarisation finished with status '$status'"
+            exit 1
+          fi
+
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          spctl --assess --type execute -vv "$APP" 2>&1 | grep -q 'source=Notarized Developer ID' \
+            || { echo "::error::Gatekeeper does not accept Murmur.app as notarised"; exit 1; }
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip="$RUNNER_TEMP/Murmur-$VERSION.zip"
+          ditto -c -k --keepParent "$APP" "$zip"
+          echo "SHA256=$(shasum -a 256 "$zip" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          gh release create "$TAG" "$zip" --title "Murmur $VERSION" --generate-notes --verify-tag
+
+      - name: Update Homebrew tap
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          tap="$RUNNER_TEMP/homebrew-tap"
+          git clone --depth 1 "https://x-access-token:$HOMEBREW_TAP_TOKEN@github.com/$TAP_REPO.git" "$tap"
+          mkdir -p "$tap/Casks"
+          cat > "$tap/Casks/murmur.rb" <<CASK
+          cask "murmur" do
+            version "$VERSION"
+            sha256 "$SHA256"
+
+            url "https://github.com/$GITHUB_REPOSITORY/releases/download/v#{version}/Murmur-#{version}.zip"
+            name "Murmur"
+            desc "Menu bar voice notes transcribed on-device and saved as Markdown"
+            homepage "https://github.com/$GITHUB_REPOSITORY"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            depends_on arch: :arm64
+            depends_on macos: :tahoe
+
+            app "Murmur.app"
+
+            uninstall quit: "$BUNDLE_ID"
+
+            zap trash: [
+              "~/Library/Application Scripts/$BUNDLE_ID",
+              "~/Library/Containers/$BUNDLE_ID",
+            ]
+          end
+          CASK
+          cd "$tap"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/murmur.rb
+          git commit -m "murmur $VERSION"
+          git push origin HEAD
+
+      - name: Remove signing keychain
+        if: always()
+        run: |
+          if [[ -n "${KEYCHAIN:-}" ]]; then security delete-keychain "$KEYCHAIN"; fi

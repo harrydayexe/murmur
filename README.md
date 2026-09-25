@@ -1,19 +1,21 @@
 # Murmur
 
-A macOS menu bar app for capturing spoken thoughts, ideas and decisions while you work. Murmur records your voice, transcribes it on your Mac, tidies it lightly, and saves it as a Markdown note in your project's folder. That folder can be inside an Obsidian vault.
+**Talk through an idea, and get a tidy Markdown note in your project folder.**
 
-Everything happens on-device. Murmur has no network access, no analytics, and uses no cloud or third-party AI models.
+Murmur lives in your Mac's menu bar. Click it and speak, and Murmur saves what you said as a clean, readable note, right next to the work it's about. It's built for capturing thoughts, ideas and decisions while you work, without breaking your flow. Notes can go straight into an Obsidian vault.
+
+**Private by design.** Everything happens on your Mac. Murmur can't connect to the internet, collects no analytics, and never sends your voice or words to a cloud service.
 
 ## Features
 
-- **One-click recording from the menu bar.** You see a timer, a level meter and a live transcript while you speak. Stop & Save when you're done, or discard the recording.
-- **On-device transcription** with Apple's Speech framework.
-- **Light AI tidying** with Apple's on-device model. It fixes punctuation, removes filler words and splits paragraphs, but it isn't allowed to paraphrase, summarise or reword. If a tidied section strays too far from what you said, Murmur keeps your original words instead.
-- **AI title, summary and key points**, clearly labelled as AI-generated.
-- **Your recordings are safe.** The audio and the raw transcript are written to disk before any AI step runs. The raw transcript is always kept in the note.
-- **Projects.** Each project has its own save folder, so notes land where the work is.
-- **Obsidian-friendly.** When a project's folder is inside a vault, notes use callouts, embedded audio and Obsidian-style properties.
-- **Front matter you control.** Every front matter key comes from a template you write. Murmur never adds keys of its own, and AI values appear only where you put a placeholder for them.
+- **Record from the menu bar in one click.** While you speak you see a timer, a level meter and a live transcript. Stop & Save when you're done, or discard the recording.
+- **Transcription on your Mac**, using Apple's built-in speech recognition.
+- **Light tidying that keeps your words.** Murmur fixes punctuation, removes filler words like "um" and "you know", and splits the text into paragraphs. It doesn't paraphrase, summarise or reword. If a tidied section strays too far from what you said, Murmur keeps your original words instead.
+- **A title, summary and key points** for every note, clearly labelled as AI-generated.
+- **Your recordings are never lost.** The audio and the raw transcript are saved before any tidying happens, and the raw transcript is always kept in the note.
+- **Projects.** Give each project its own folder, so notes land where the work is.
+- **Made for Obsidian.** When a project's folder is inside a vault, notes use callouts, embedded audio and Obsidian properties.
+- **Front matter you control.** Murmur only adds the properties you ask for in your own template, nothing more.
 
 ## What a note looks like
 
@@ -39,12 +41,31 @@ So we chose SQLite for the cache, because the JSON files kept getting corruptedâ
 
 ## Requirements
 
-- macOS 26.4 or later on Apple silicon
-- Apple Intelligence turned on for tidying, titles and summaries. Without it, notes are still saved with the plain transcript.
+- A Mac with Apple silicon, running macOS 26.4 or later
+- Apple Intelligence turned on for tidying, titles and summaries. Without it, Murmur still saves your notes with the plain transcript.
+
+## Install
+
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask harrydayexe/tap/murmur
+```
+
+Or download the latest `Murmur-<version>.zip` from [Releases](https://github.com/harrydayexe/murmur/releases), unzip it and move `Murmur.app` to your Applications folder.
+
+To update, run `brew upgrade --cask murmur` or download the new release.
+
+## Getting started
+
+1. Open Murmur. A waveform icon appears in your menu bar.
+2. Click it, choose **New projectâ€¦**, and pick the folder where notes should be saved.
+3. Click **Record**. The first time, macOS asks for access to your microphone and speech recognition.
+4. Speak, then click **Stop & Save**. Your note appears in the project's folder a few moments later.
 
 ## Status
 
-Early and in active development. Customisation for templates, note types, AI tags, the timeline and hotkeys is planned. For now, anything beyond projects can be changed by editing the settings file. See [SPEC.md](SPEC.md) for the full design.
+Murmur is early and in active development. Coming soon: a global hotkey, and settings for templates, note types, AI tags and the timeline.
 
 ## License
 
