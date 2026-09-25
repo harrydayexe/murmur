@@ -1,0 +1,88 @@
+name: Murmur
+options:
+  bundleIdPrefix: dev.harryday
+  deploymentTarget:
+    macOS: "26.4"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: WQ55A92845
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "26.4"
+    ARCHS: arm64
+packages:
+  Yams:
+    url: https://github.com/jpsim/Yams
+    from: 6.2.0
+targets:
+  Murmur:
+    type: application
+    platform: macOS
+    sources:
+      - path: Murmur
+    dependencies:
+      - package: Yams
+    info:
+      path: Murmur/Info.plist
+      properties:
+        CFBundleDisplayName: Murmur
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.productivity
+        NSMicrophoneUsageDescription: Murmur records your voice notes so it can transcribe them on this Mac.
+        NSSpeechRecognitionUsageDescription: Murmur transcribes your voice notes on this Mac. Audio never leaves your computer.
+    entitlements:
+      path: Murmur/Murmur.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.device.audio-input: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.files.bookmarks.app-scope: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.harryday.murmur
+        PRODUCT_NAME: Murmur
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: Apple Development
+        ENABLE_HARDENED_RUNTIME: true
+        GENERATE_INFOPLIST_FILE: false
+        COMBINE_HIDPI_IMAGES: true
+  MurmurTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: MurmurTests
+    dependencies:
+      - target: Murmur
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.harryday.murmur.tests
+        GENERATE_INFOPLIST_FILE: true
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Murmur.app/Contents/MacOS/Murmur
+        BUNDLE_LOADER: $(TEST_HOST)
+        CODE_SIGN_STYLE: Automatic
+  # Not hosted, so it runs outside the app sandbox and can read the repo's sources.
+  MurmurSourceCheckTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: MurmurSourceCheckTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.harryday.murmur.sourcecheck
+        GENERATE_INFOPLIST_FILE: true
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  Murmur:
+    build:
+      targets:
+        Murmur: all
+        MurmurTests: [test]
+        MurmurSourceCheckTests: [test]
+    test:
+      targets:
+        - MurmurTests
+        - MurmurSourceCheckTests
+      gatherCoverageData: false

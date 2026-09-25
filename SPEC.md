@@ -1,10 +1,10 @@
-# Voicelog — Spec 
+# Murmur — Spec 
 
 A macOS menu bar utility that records spoken thoughts, ideas and technical decisions, transcribes them **on-device**, lightly tidies them with Apple's **on-device** Foundation Models, and saves each one as a Markdown note in the folder of the project being worked on. That folder is often inside an Obsidian vault.
 
 The notes are raw material for blog posts about building projects. The owner will read them later to reconstruct how a project evolved, so **accuracy to what was said matters more than polish.**
 
-> Working name: **Voicelog**. Rename freely.
+> Name: **Murmur** (formerly the working name *Voicelog*). Bundle ID `dev.harryday.murmur`.
 
 **Changes since v3:** front matter is now **100% user-controlled** (§5.3):
 - The app never adds a key by itself.
@@ -79,7 +79,7 @@ The notes are raw material for blog posts about building projects. The owner wil
 
 ### 4.1 Settings file
 All settings live in one human-readable JSON file:
-`~/Library/Containers/<bundle-id>/Data/Library/Application Support/Voicelog/settings.json`
+`~/Library/Containers/<bundle-id>/Data/Library/Application Support/Murmur/settings.json`
 - A `SettingsStore` (`@MainActor @Observable`) loads it at launch and saves it atomically with a debounce of about 500 ms. It has a `"version": 1` field and keeps unknown keys when saving.
 - If the file is corrupt, back it up as `settings.corrupt-<timestamp>.json`, load defaults, and show a warning.
 - Settings → Advanced has a **Reveal settings file** button. Editing the file by hand requires a restart.
@@ -97,9 +97,9 @@ All settings live in one human-readable JSON file:
   "projects": [
     {
       "id": "8C1E…",
-      "name": "Voicelog",
+      "name": "Murmur",
       "folderBookmark": "<base64>",
-      "folderPathHint": "/Users/harry/Vault/Projects/Voicelog/Log",
+      "folderPathHint": "/Users/harry/Vault/Projects/Murmur/Log",
       "style": "obsidian",
       "vaultRootPathHint": "/Users/harry/Vault",
       "frontMatter": { "mode": "override", "template": "…", "timelineTemplate": "" },
@@ -136,7 +136,12 @@ Each project has its **own save folder**, front matter, note style and glossary.
 - On launch, resolve all bookmarks and call `startAccessingSecurityScopedResource()`, keeping access open for the app's lifetime. If a bookmark is stale, re-create it.
 - Two projects can share a folder; show a warning, but allow it.
 - **Before recording**: if the active folder isn't writable, don't start. Show a fix action.
-- **At save time**: if the folder has become unreachable, save to `Application Support/Voicelog/Unsaved/<project>/`, show a notification, and offer **Move to project folder** later.
+- **At save time**: if the folder has become unreachable, save to `Application Support/Murmur/Unsaved/<project>/`, show a notification, and offer **Move to project folder** later.
+
+**Default folder**
+- On first launch the settings file gets one project, **Inbox**, with no bookmark and `folderPathHint` = `~/Documents/Murmur` (the real home directory, not the sandbox container).
+- The sandbox can't write there until the user grants access. When **Record** is pressed and the active project has no usable folder, an open panel appears at `~/Documents` ("Murmur saves notes to ~/Documents/Murmur — click Grant Access, or choose another folder"). If the user picks `~/Documents` itself, the app creates `Murmur/` inside it and bookmarks that subfolder. Any other choice is bookmarked as is. The prompt comes before recording rather than at save time, so a recording never finishes with nowhere to go. If the panel is cancelled, recording doesn't start.
+- Settings → Projects has the same **Choose folder…** action.
 
 ### 4.3 Settings window tabs
 - **General**: launch at login, notifications, hotkeys
@@ -178,8 +183,8 @@ Each section can be switched off in the AI or Recording settings. Disabled or fa
 3. Summary *(AI-generated)*, if `ai.body.summary` is on
 4. Key points *(AI-generated)*, if `ai.body.keyPoints` is on
 5. Audio embed/link, if audio is kept
-6. `## Transcript` (tidied)
-7. Raw transcript (collapsed)
+6. `## Transcript` (tidied). If nothing was transcribed, it says *No speech was transcribed.* rather than leaving the heading empty.
+7. Raw transcript (collapsed): the speech recogniser's output before glossary replacements and tidying. Left out if empty.
 
 ### 5.3 Front matter (fully user-defined)
 
@@ -216,7 +221,7 @@ The front matter of a note is **exactly** the rendered template, and nothing els
 | `{{project}}` | Project name | app |
 | `{{type}}` | Type picked by the user. If `Auto`: the AI-classified type if classification is on, otherwise empty | user / AI |
 | `{{date}}`, `{{time}}`, `{{datetime}}`, `{{weekday}}` | Recording start. Default formats: `YYYY-MM-DD`, `HH:mm`, and `YYYY-MM-DDTHH:mm:ss` (obsidian) or ISO 8601 with offset (standard), `dddd` | app |
-| `{{date:FORMAT}}` (also `time:`, `datetime:`) | Custom format using **Obsidian/moment-style tokens**: `YYYY YY MMMM MMM MM M DD D dddd ddd HH H hh h mm ss A Z ZZ`, with `[literal]` escapes | app |
+| `{{date:FORMAT}}` (also `time:`, `datetime:`) | Custom format using **Obsidian/moment-style tokens**: `YYYY YY MMMM MMM MM M DD D dddd ddd HH H hh h mm ss A Z ZZ w ww` (`w` is the ISO week number), with `[literal]` escapes | app |
 | `{{duration}}` | `3m12s`. `{{duration_seconds}}` gives an integer | app |
 | `{{locale}}` | `en-GB` | app |
 | `{{filename}}` | Note filename without `.md` | app |
@@ -374,8 +379,8 @@ Re-render the templates with all values, and rewrite the note atomically. Rename
 ## 7. Architecture
 
 ```
-Voicelog/
-  App/            VoicelogApp.swift, AppState.swift
+Murmur/
+  App/            MurmurApp.swift, AppState.swift
   Settings/       SettingsStore.swift, Settings.swift (Codable), SettingsView + tabs, NoteTypesView.swift
   Projects/       Project.swift, ProjectStore.swift, FolderAccess.swift, VaultDetector.swift, ProjectPicker.swift
   Recording/      AudioRecorder.swift, LevelMeter.swift
@@ -388,7 +393,7 @@ Voicelog/
   UI/             PopoverView, RecordingView, ProcessingView, RecentNotesView, NewProjectSheet,
                   FrontMatterEditor (highlighting, autocomplete, preview), Onboarding/
   Support/        Log.swift, Permissions.swift
-VoicelogTests/
+MurmurTests/
 project.yml
 ```
 - `AppState` is a `@MainActor @Observable` state machine: `idle → recording(project) → finalizing → tidying(i, n) → writing → done(URL) | error`
@@ -443,3 +448,8 @@ Diarisation, editing notes inside the app, sync, iOS version, any non-on-device 
 - Foundation Models supports runtime schemas through `DynamicGenerationSchema` → `GenerationSchema(root:dependencies:)` with `GeneratedContent` results. Use this rather than a fixed `@Generable` struct, so unused fields are never requested.
 - Obsidian properties: types are text, list, number, checkbox, date (`YYYY-MM-DD`), date & time (`YYYY-MM-DDTHH:mm:ss`), and `tags`. Wikilinks in properties must be quoted. Nested properties are valid YAML, but Obsidian's properties UI can't edit them.
 - Verify exact API signatures against the installed SDK. There have been small naming differences between WWDC sessions and the shipping SDK.
+
+**SDK differences found (macOS 27 SDK, Xcode 27):**
+- `GenerationOptions(sampling:…)` is deprecated. Use `GenerationOptions(samplingMode:temperature:maximumResponseTokens:)`.
+- On macOS 27, `LanguageModelError.contextSizeExceeded` (plus `.guardrailViolation`, `.unsupportedLanguageOrLocale`) replaces the `LanguageModelSession.GenerationError` cases, which are deprecated there. The deployment target is 26.4, so the polisher handles both behind `#available(macOS 27, *)`.
+- `SystemLanguageModel.contextSize` is back-deployed to 26.4.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Voicelog is a macOS menu bar app. It records voice notes, transcribes them on-device, and saves them as Markdown in per-project folders, which are often Obsidian vaults.
+Murmur is a macOS menu bar app. It records voice notes, transcribes them on-device, and saves them as Markdown in per-project folders, which are often Obsidian vaults.
 
 **`SPEC.md` is the source of truth.** Read it before starting any work. If something you need isn't in the spec, or you have to diverge from it, update `SPEC.md` in the same change and say why.
 
@@ -17,8 +17,8 @@ Swift 6 (strict concurrency), SwiftUI `MenuBarExtra`, macOS 26.4+, Apple silicon
 ## Commands
 ```sh
 xcodegen generate
-xcodebuild -scheme Voicelog -destination 'platform=macOS' build
-xcodebuild -scheme Voicelog -destination 'platform=macOS' test
+xcodebuild -scheme Murmur -destination 'platform=macOS' build
+xcodebuild -scheme Murmur -destination 'platform=macOS' test
 ```
 Run the tests before calling any task done. A change that breaks the build or tests isn't finished.
 
