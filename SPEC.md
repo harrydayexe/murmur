@@ -28,7 +28,7 @@ The notes are raw material for blog posts about building projects. The owner wil
 
 | Item | Decision |
 |---|---|
-| OS minimum | **macOS 26.4** (for `SystemLanguageModel.contextSize` and `tokenCount(for:)`). Also runs on macOS 27. |
+| OS minimum | **macOS 27**, built with Xcode 27 / the macOS 27 SDK. Raised from 26.4 because the code uses macOS 27 SDK APIs (`GenerationOptions(samplingMode:)`, `LanguageModelError`) that don't exist in the 26.x SDKs. |
 | Hardware | Apple silicon. Apple Intelligence must be on for the AI steps. Speech-to-text works without it. |
 | Language | Swift 6 (strict concurrency), SwiftUI, with AppKit only where needed |
 | Frameworks | `Speech`, `AVFoundation`, `FoundationModels`, `SwiftUI`, `ServiceManagement`, `UserNotifications` |
@@ -452,5 +452,5 @@ Diarisation, editing notes inside the app, sync, iOS version, any non-on-device 
 
 **SDK differences found (macOS 27 SDK, Xcode 27):**
 - `GenerationOptions(sampling:…)` is deprecated. Use `GenerationOptions(samplingMode:temperature:maximumResponseTokens:)`.
-- On macOS 27, `LanguageModelError.contextSizeExceeded` (plus `.guardrailViolation`, `.unsupportedLanguageOrLocale`) replaces the `LanguageModelSession.GenerationError` cases, which are deprecated there. The deployment target is 26.4, so the polisher handles both behind `#available(macOS 27, *)`.
-- `SystemLanguageModel.contextSize` is back-deployed to 26.4.
+- On macOS 27, `LanguageModelError.contextSizeExceeded` (plus `.guardrailViolation`, `.unsupportedLanguageOrLocale`) replaces the `LanguageModelSession.GenerationError` cases, which are deprecated there. `ModelStatus.isContextExceeded` still checks both in case the deprecated error is thrown.
+- Release CI runs on GitHub's `xcode-27` runner image. The `macos-26` image only has Xcode 26.x, whose SDK lacks the APIs above.

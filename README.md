@@ -41,7 +41,7 @@ So we chose SQLite for the cache, because the JSON files kept getting corruptedâ
 
 ## Requirements
 
-- A Mac with Apple silicon, running macOS 26.4 or later
+- A Mac with Apple silicon, running macOS 27 or later
 - Apple Intelligence turned on for tidying, titles and summaries. Without it, Murmur still saves your notes with the plain transcript.
 
 ## Install

@@ -22,7 +22,7 @@ enum ModelStatus {
 
     /// True if the error means the prompt didn't fit the context window.
     static func isContextExceeded(_ error: Error) -> Bool {
-        if #available(macOS 27, *), let error = error as? LanguageModelError, case .contextSizeExceeded = error {
+        if let error = error as? LanguageModelError, case .contextSizeExceeded = error {
             return true
         }
         if let error = error as? LanguageModelSession.GenerationError, case .exceededContextWindowSize = error {

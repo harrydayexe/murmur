@@ -2,14 +2,14 @@ name: Murmur
 options:
   bundleIdPrefix: dev.harryday
   deploymentTarget:
-    macOS: "26.4"
+    macOS: "27.0"
   createIntermediateGroups: true
 settings:
   base:
     DEVELOPMENT_TEAM: WQ55A92845
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MACOSX_DEPLOYMENT_TARGET: "26.4"
+    MACOSX_DEPLOYMENT_TARGET: "27.0"
     ARCHS: arm64
 packages:
   Yams:

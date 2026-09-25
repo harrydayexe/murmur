@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: macos-26
+    runs-on: xcode-27
     environment: release
     env:
       TEAM_ID: WQ55A92845
@@ -177,7 +177,7 @@ jobs:
             end
 
             depends_on arch: :arm64
-            depends_on macos: :tahoe
+            depends_on macos: :golden_gate
 
             app "Murmur.app"
 

@@ -12,7 +12,7 @@ Murmur is a macOS menu bar app. It records voice notes, transcribes them on-devi
 - **Dependencies:** Apple frameworks, `KeyboardShortcuts` and `Yams` only. Ask before adding anything else.
 
 ## Stack
-Swift 6 (strict concurrency), SwiftUI `MenuBarExtra`, macOS 26.4+, Apple silicon, App Sandbox on. The project is generated from `project.yml` with XcodeGen. Don't commit `.xcodeproj`.
+Swift 6 (strict concurrency), SwiftUI `MenuBarExtra`, macOS 27+, Apple silicon, App Sandbox on. The project is generated from `project.yml` with XcodeGen. Don't commit `.xcodeproj`.
 
 ## Commands
 ```sh
